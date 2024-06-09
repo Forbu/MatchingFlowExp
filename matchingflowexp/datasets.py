@@ -17,7 +17,7 @@ DEFAULT_IMAGE_SIZE = 64
 
 DEFAULT_TRANSFORM = transforms.Compose(
     [
-        transforms.Resize(DEFAULT_IMAGE_SIZE),
+        transforms.Resize((DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
