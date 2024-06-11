@@ -33,20 +33,31 @@ class ImageNet64(data.Dataset):
 
         ## load datasets from huggingface
         self.dataset = datasets.load_dataset(
-            "imagenet-1k", split="train" if self.train else "validation", cache_dir=self.root
+            "ILSVRC/imagenet-1k", split="train" if self.train else "validation", cache_dir=self.root
         )
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, index):
+
+        print("begin")
         img = self.dataset[index]["image"]
         target = self.dataset[index]["label"]
+
+
 
         if self.transform is not None:
             img = self.transform(img)
 
+        print(img.shape)
+
+        if img.shape != torch.Size([3, 64, 64]):
+            print(img.shape)
+
         if self.target_transform is not None:
             target = self.target_transform(target)
+
+        
 
         return img, target
