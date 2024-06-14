@@ -5,3 +5,4 @@ lightning
 schedulefree
 einops
 numpy
+matplotlib
