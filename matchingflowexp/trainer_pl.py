@@ -38,7 +38,12 @@ class FlowTrainer(pl.LightningModule):
     Trainer module for the MNIST model.
     """
 
-    def __init__(self, nb_time_steps=100, noise_proba=0.01):
+    def __init__(
+        self,
+        nb_time_steps=100,
+        noise_proba=0.01,
+        save_dir="/teamspace/studios/this_studio/",
+    ):
         """
         Args:
             hidden_dim (int): hidden dimension of the model
@@ -49,6 +54,7 @@ class FlowTrainer(pl.LightningModule):
 
         self.nb_time_steps = nb_time_steps
         self.noise_proba = noise_proba
+        self.save_dir = save_dir
 
         # create the model
         self.model = dit_models.DiT_models["DiT-S/4"](input_size=64, in_channels=3)
@@ -117,6 +123,8 @@ class FlowTrainer(pl.LightningModule):
 
         loss = self.loss_fn(result_unnoise[:, :3, :, :], image)
 
+        self.log("loss_training", loss.cpu().detach().numpy().item())
+
         return loss
 
     # on training end
@@ -167,7 +175,7 @@ class FlowTrainer(pl.LightningModule):
         plt.title(f"data = {i}")
 
         # save the figure
-        plt.savefig(f"/teamspace/studios/this_studio/data_{i}.png")
+        plt.savefig(self.save_dir + f"data_{i}.png")
 
         # close the figure
         plt.close()
@@ -177,7 +185,7 @@ class FlowTrainer(pl.LightningModule):
         Configure the optimizer.
         """
         # create the optimizer
-        #optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         optimizer = AdamWScheduleFree(self.parameters(), lr=1e-3)
 
         return optimizer

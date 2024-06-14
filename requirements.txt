@@ -4,3 +4,4 @@ wandb
 lightning
 schedulefree
 einops
+numpy
