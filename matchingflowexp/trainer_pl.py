@@ -14,9 +14,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import einops
-
-from tqdm import tqdm
 
 import lightning.pytorch as pl
 
@@ -121,7 +118,10 @@ class FlowTrainer(pl.LightningModule):
 
         result_unnoise = self.model(gt, t.squeeze(1), labels)
 
-        loss = self.loss_fn(result_unnoise[:, :3, :, :], image)
+        loss = F.mse_loss(result_unnoise[:, :3, :, :], image, reduction="none")
+
+        loss = loss * w_t.unsqueeze(1).unsqueeze(1)
+        loss = torch.mean(loss)
 
         self.log("loss_training", loss.cpu().detach().numpy().item())
 
