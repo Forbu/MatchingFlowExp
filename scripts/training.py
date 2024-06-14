@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader
 import lightning.pytorch as pl
 from matchingflowexp.trainer_pl import FlowTrainer
 
+import torch
+torch.set_float32_matmul_precision('medium')
+
 if __name__ == "__main__":
     train_dataset = ds.ImageNet64(
         root="/teamspace/studios/this_studio/data",
@@ -14,15 +17,14 @@ if __name__ == "__main__":
         transform=ds.DEFAULT_TRANSFORM,
     )
 
-    batch_size = 32
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    batch_size = 64
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
 
     model = FlowTrainer()
 
     # wandb logger
-    logger = pl.loggers.WandbLogger(project="normalizeflow")
+    logger = pl.loggers.WandbLogger(project="matchingflowimagenet")
 
-    trainer = pl.Trainer(max_epochs=20, logger=logger)
 
-    trainer = pl.Trainer(max_epochs=100, logger=logger, accumulate_grad_batches=8)
+    trainer = pl.Trainer(max_epochs=100, logger=logger, gradient_clip_val=1.0, precision="bf16")
     trainer.fit(model, train_loader)

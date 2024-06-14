@@ -20,7 +20,9 @@ from tqdm import tqdm
 
 import lightning.pytorch as pl
 
-from MatchingFlowExp import dit_models
+from schedulefree import AdamWScheduleFree
+
+from matchingflowexp import dit_models
 
 PI = 3.141592653589
 
@@ -113,7 +115,7 @@ class FlowTrainer(pl.LightningModule):
 
         result_unnoise = self.model(gt, t.squeeze(1), labels)
 
-        loss = self.loss_fn(result_unnoise, image)
+        loss = self.loss_fn(result_unnoise[:, :3, :, :], image)
 
         return loss
 
@@ -175,6 +177,7 @@ class FlowTrainer(pl.LightningModule):
         Configure the optimizer.
         """
         # create the optimizer
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        #optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = AdamWScheduleFree(self.parameters(), lr=1e-3)
 
         return optimizer
