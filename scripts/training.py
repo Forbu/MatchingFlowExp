@@ -9,6 +9,7 @@ import sys
 import torch
 
 from lightning.pytorch.callbacks import Callback
+from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
 
 from matchingflowexp import datasets as ds
 from torch.utils.data import DataLoader
@@ -22,7 +23,7 @@ CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
 NOM_MODELE = "matchingflow"
-
+DIR_TB = CURRENT_DIR + "tb_logs/"
 
 # Register callbacks
 class MyFairRequeue(Callback):
@@ -103,6 +104,7 @@ if __name__ == "__main__":
 
     # wandb logger
     logger = None  # .loggers.WandbLogger(project="matchingflowimagenet")
+    tb_logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.1")
 
     # get last checkpoint (check the NOM_MODELE and take the last created)
     last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
@@ -122,6 +124,8 @@ if __name__ == "__main__":
         max_time={"hours": 48},
         logger=logger,
         gradient_clip_val=1.0,
-        precision="bf16-mixed",
+        precision="16",
+        callbacks=[checkpoint_model],
+        #limit_train_batches=0.01,
     )
     trainer.fit(model, train_loader, ckpt_path=last_checkpoint)

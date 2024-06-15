@@ -144,8 +144,8 @@ class FlowTrainer(pl.LightningModule):
         # init the prior
         prior_t = torch.randn(1, 3, 64, 64).to(self.device)
 
-        # choose a random class TODO
-        y = torch.zeros((1)).to(self.device)
+        # choose a random int between 0 and 1000
+        y = torch.randint(0, 1000, (1,)).to(self.device)
 
         for i in range(self.nb_time_steps):
             t = torch.ones((1)).to(self.device)
@@ -156,7 +156,7 @@ class FlowTrainer(pl.LightningModule):
             g1_estimation = self.model(prior_t, t, y)
 
             u_theta = w_t.unsqueeze(1).unsqueeze(1) * (
-                g1_estimation - prior_t
+                g1_estimation[:, :3, :, :] - prior_t
             )
 
             prior_t = prior_t + u_theta * 1 / self.nb_time_steps
@@ -168,7 +168,10 @@ class FlowTrainer(pl.LightningModule):
         Saves the image.
         """
         # plot the data
-        plt.imshow(data.squeeze().cpu().numpy(), cmap="gray")
+        # normalized data to get the max value between 0 and 1
+        data = data - data.min()
+        data = data / data.max()
+        plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
 
         # title
         plt.title(f"data = {i}")

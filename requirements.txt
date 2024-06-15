@@ -1,6 +1,7 @@
 datasets
 timm
 wandb
+tensorboard
 lightning
 schedulefree
 einops
