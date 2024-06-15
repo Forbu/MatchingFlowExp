@@ -38,7 +38,7 @@ class FlowTrainer(pl.LightningModule):
     def __init__(
         self,
         nb_time_steps=100,
-        noise_proba=0.01,
+        noise_proba=0.1,
         save_dir="/teamspace/studios/this_studio/",
     ):
         """
@@ -161,16 +161,18 @@ class FlowTrainer(pl.LightningModule):
 
             prior_t = prior_t + u_theta * 1 / self.nb_time_steps
 
-        self.save_image(prior_t, 100)
+        # get the epoch number
+        epoch = self.current_epoch
+        self.save_image(prior_t, epoch)
 
     def save_image(self, data, i):
         """
         Saves the image.
         """
         # plot the data
-        # normalized data to get the max value between 0 and 1
-        data = data - data.min()
-        data = data / data.max()
+        # the data has been normalized 
+        # we clip the data to 0 and 1
+        data = torch.clamp(data, 0, 1)
         plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
 
         # title
@@ -188,6 +190,6 @@ class FlowTrainer(pl.LightningModule):
         """
         # create the optimizer
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        optimizer = AdamWScheduleFree(self.parameters(), lr=1e-3)
+        optimizer = AdamWScheduleFree(self.parameters(), lr=1e-4)
 
         return optimizer
