@@ -56,6 +56,8 @@ class FlowTrainer(pl.LightningModule):
         # create the model
         self.model = dit_models.DiT_models["DiT-S/4"](input_size=64, in_channels=3)
 
+        # self.model = torch.compile(self.model)
+
         # create the loss function
         self.loss_fn = nn.MSELoss()
 
@@ -140,10 +142,10 @@ class FlowTrainer(pl.LightningModule):
         Method to generate some images.
         """
         # init the prior
-        prior_t = torch.randn(3, 64, 64, self.num_bins).to(self.device)
+        prior_t = torch.randn(1, 3, 64, 64).to(self.device)
 
         # choose a random class TODO
-        y = 0
+        y = torch.zeros((1)).to(self.device)
 
         for i in range(self.nb_time_steps):
             t = torch.ones((1)).to(self.device)
@@ -153,11 +155,8 @@ class FlowTrainer(pl.LightningModule):
 
             g1_estimation = self.model(prior_t, t, y)
 
-            # apply softmax to the logits
-            g1_estimation = F.softmax(g1_estimation, dim=1)
-
-            u_theta = w_t.unsqueeze(2).unsqueeze(3) * (
-                g1_estimation.permute(0, 2, 3, 1) - prior_t
+            u_theta = w_t.unsqueeze(1).unsqueeze(1) * (
+                g1_estimation - prior_t
             )
 
             prior_t = prior_t + u_theta * 1 / self.nb_time_steps
