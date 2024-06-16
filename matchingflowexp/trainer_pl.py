@@ -17,6 +17,7 @@ import torch.nn.functional as F
 
 import lightning.pytorch as pl
 
+from diffusers.models import AutoencoderKL
 from schedulefree import AdamWScheduleFree
 
 from matchingflowexp import dit_models
@@ -52,6 +53,10 @@ class FlowTrainer(pl.LightningModule):
         self.nb_time_steps = nb_time_steps
         self.noise_proba = noise_proba
         self.save_dir = save_dir
+        self.nb_channel = 4
+
+        vae_model = "stabilityai/sd-vae-ft-ema"
+        self.vae = AutoencoderKL.from_pretrained(vae_model)
 
         # create the model
         self.model = dit_models.DiT_models["DiT-S/4"](input_size=64, in_channels=3)
@@ -96,9 +101,13 @@ class FlowTrainer(pl.LightningModule):
         # we get the data from the batch
         image, labels = batch
 
+        # preprocess image with vae
+        with torch.nograd():
+            image = self.vae.encode(image).latent_dist.sample()
+
         batch_size = image.shape[0]
         img_w = image.shape[2]
-        nb_channel = 3
+        
 
         # now we need to select a random time step between 0 and 1 for all the batch
         t = torch.rand(batch_size, 1).float()
@@ -107,7 +116,7 @@ class FlowTrainer(pl.LightningModule):
         w_t, alpha_t, alpha_t_dt = self.compute_params_from_t(t)
 
         # we generate the prior dataset (gaussian noise)
-        prior = torch.randn(batch_size, nb_channel, img_w, img_w).to(self.device)
+        prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
 
         alpha_t = alpha_t.unsqueeze(2).unsqueeze(3)
 
@@ -115,12 +124,12 @@ class FlowTrainer(pl.LightningModule):
 
         # TODO add some noise to gt
         gt = gt + self.noise_proba * torch.randn(
-            batch_size, nb_channel, img_w, img_w
+            batch_size, self.nb_channel, img_w, img_w
         ).to(self.device)
 
         result_unnoise = self.model(gt, t.squeeze(1), labels)
 
-        loss = F.mse_loss(result_unnoise[:, :3, :, :], image, reduction="none")
+        loss = F.mse_loss(result_unnoise[:, :self.nb_channel, :, :], image, reduction="none")
 
         loss = loss * w_t.unsqueeze(1).unsqueeze(1)
         loss = torch.mean(loss)
@@ -142,7 +151,7 @@ class FlowTrainer(pl.LightningModule):
         Method to generate some images.
         """
         # init the prior
-        prior_t = torch.randn(1, 3, 64, 64).to(self.device)
+        prior_t = torch.randn(1, self.nb_channel, 64, 64).to(self.device)
 
         # choose a random int between 0 and 1000
         y = torch.randint(0, 1000, (1,)).to(self.device)
@@ -156,14 +165,16 @@ class FlowTrainer(pl.LightningModule):
             g1_estimation = self.model(prior_t, t, y)
 
             u_theta = w_t.unsqueeze(1).unsqueeze(1) * (
-                g1_estimation[:, :3, :, :] - prior_t
+                g1_estimation[:, :self.nb_channel, :, :] - prior_t
             )
 
             prior_t = prior_t + u_theta * 1 / self.nb_time_steps
 
+        image = self.vae.decode(prior_t).sample
+
         # get the epoch number
         epoch = self.current_epoch
-        self.save_image(prior_t, epoch)
+        self.save_image(image, epoch)
 
     def save_image(self, data, i):
         """

@@ -12,15 +12,14 @@ import numpy as np
 import os
 from PIL import Image
 import datasets
+from diffusers.image_processor import VaeImageProcessor
 
-DEFAULT_IMAGE_SIZE = 64
+DEFAULT_IMAGE_SIZE = 256
 
 DEFAULT_TRANSFORM = transforms.Compose(
     [
         transforms.Resize((DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225]),
     ]
 )
 
@@ -33,6 +32,8 @@ class ImageNet64(data.Dataset):
         self.train = train
         self.transform = transform
         self.target_transform = target_transform
+
+        self.vaeprocessor = VaeImageProcessor()
 
         ## load datasets from huggingface
         self.dataset = datasets.load_dataset(
@@ -51,11 +52,11 @@ class ImageNet64(data.Dataset):
         if self.transform is not None:
             try:
                 img = self.transform(img)
+                img = self.vaeprocessor(
+                    img, height=DEFAULT_IMAGE_SIZE, width=DEFAULT_IMAGE_SIZE
+                )
             except Exception as e:
                 return self.__getitem__(index + 1)
-
-        if img.shape != torch.Size([3, 64, 64]):
-            print(img.shape)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
