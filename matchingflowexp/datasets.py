@@ -55,6 +55,8 @@ class ImageNet64(data.Dataset):
 
             if img.shape[0] == 1:
                 img = img.repeat(3, 1, 1)
+            if img.shape[0] != 3:
+                return self.__getitem__(index + 1)
 
             img = self.vaeprocessor.preprocess(
                 img, height=DEFAULT_IMAGE_SIZE, width=DEFAULT_IMAGE_SIZE
