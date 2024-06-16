@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     batch_size = 128
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
     )
 
     model = FlowTrainer(save_dir=CURRENT_DIR + "results/")
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         precision="16",
         callbacks=[checkpoint_model],
         #limit_train_batches=0.01,
-        enable_progress_bar=False,
+        enable_progress_bar=True,
+        strategy='ddp_find_unused_parameters_true',
     )
     trainer.fit(model, train_loader, ckpt_path=last_checkpoint)
