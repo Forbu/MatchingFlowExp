@@ -102,7 +102,7 @@ class FlowTrainer(pl.LightningModule):
         image, labels = batch
 
         # preprocess image with vae
-        with torch.nograd():
+        with torch.no_grad():
             image = self.vae.encode(image).latent_dist.sample()
 
         batch_size = image.shape[0]
