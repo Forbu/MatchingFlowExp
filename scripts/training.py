@@ -22,7 +22,7 @@ torch.set_float32_matmul_precision("medium")
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv2"
+NOM_MODELE = "matchingflowv4"
 DIR_TB = CURRENT_DIR + "tb_logs/"
 
 # Register callbacks
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     batch_size = 128
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=8
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
     )
 
     model = FlowTrainer(save_dir=CURRENT_DIR + "results/")
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     # wandb logger
     logger = None  # .loggers.WandbLogger(project="matchingflowimagenet")
-    tb_logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.3")
+    tb_logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.4")
 
     # get last checkpoint (check the NOM_MODELE and take the last created)
     last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
