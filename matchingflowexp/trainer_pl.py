@@ -172,7 +172,11 @@ class FlowTrainer(pl.LightningModule):
         # plot the data
         # the data has been normalized 
         # we clip the data to 0 and 1
-        data = torch.clamp(data, 0, 1)
+        data = torch.clamp(data, -1, 1)
+
+        # resize the data to be between 0 and 1
+        data = (data + 1.)/2. 
+
         plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
 
         # title
