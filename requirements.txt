@@ -8,3 +8,4 @@ einops
 numpy
 matplotlib
 diffusion
+accelerate
