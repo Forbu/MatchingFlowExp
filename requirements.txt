@@ -7,5 +7,5 @@ schedulefree
 einops
 numpy
 matplotlib
-diffusion
 accelerate
+diffusers

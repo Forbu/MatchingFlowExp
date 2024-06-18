@@ -50,13 +50,22 @@ class ImageNet64(data.Dataset):
         target = self.dataset[index]["label"]
 
         if self.transform is not None:
-            try:
-                img = self.transform(img)
-                img = self.vaeprocessor(
-                    img, height=DEFAULT_IMAGE_SIZE, width=DEFAULT_IMAGE_SIZE
-                )
-            except Exception as e:
+            #try:
+            img = self.transform(img)
+
+            if img.shape[0] == 1:
+                img = img.repeat(3, 1, 1)
+            if img.shape[0] != 3:
                 return self.__getitem__(index + 1)
+
+            img = self.vaeprocessor.preprocess(
+                img, height=DEFAULT_IMAGE_SIZE, width=DEFAULT_IMAGE_SIZE
+            )
+
+            img = img.squeeze(0)
+
+            # except Exception as e:
+            #     return self.__getitem__(index + 1)
 
         if self.target_transform is not None:
             target = self.target_transform(target)

@@ -57,9 +57,10 @@ class FlowTrainer(pl.LightningModule):
 
         vae_model = "stabilityai/sd-vae-ft-ema"
         self.vae = AutoencoderKL.from_pretrained(vae_model)
+        self.vae.eval()
 
         # create the model
-        self.model = dit_models.DiT_models["DiT-S/4"](input_size=64, in_channels=3)
+        self.model = dit_models.DiT_models["DiT-S/4"](input_size=32, in_channels=4)
 
         # self.model = torch.compile(self.model)
 
@@ -103,11 +104,10 @@ class FlowTrainer(pl.LightningModule):
 
         # preprocess image with vae
         with torch.no_grad():
-            image = self.vae.encode(image).latent_dist.sample()
+            image = self.vae.encode(image).latent_dist.sample().detach()
 
         batch_size = image.shape[0]
         img_w = image.shape[2]
-        
 
         # now we need to select a random time step between 0 and 1 for all the batch
         t = torch.rand(batch_size, 1).float()
@@ -129,7 +129,9 @@ class FlowTrainer(pl.LightningModule):
 
         result_unnoise = self.model(gt, t.squeeze(1), labels)
 
-        loss = F.mse_loss(result_unnoise[:, :self.nb_channel, :, :], image, reduction="none")
+        loss = F.mse_loss(
+            result_unnoise[:, : self.nb_channel, :, :], image, reduction="none"
+        )
 
         loss = loss * w_t.unsqueeze(1).unsqueeze(1)
         loss = torch.mean(loss)
@@ -165,7 +167,7 @@ class FlowTrainer(pl.LightningModule):
             g1_estimation = self.model(prior_t, t, y)
 
             u_theta = w_t.unsqueeze(1).unsqueeze(1) * (
-                g1_estimation[:, :self.nb_channel, :, :] - prior_t
+                g1_estimation[:, : self.nb_channel, :, :] - prior_t
             )
 
             prior_t = prior_t + u_theta * 1 / self.nb_time_steps
@@ -181,12 +183,12 @@ class FlowTrainer(pl.LightningModule):
         Saves the image.
         """
         # plot the data
-        # the data has been normalized 
+        # the data has been normalized
         # we clip the data to 0 and 1
         data = torch.clamp(data, -1, 1)
 
         # resize the data to be between 0 and 1
-        data = (data + 1.)/2. 
+        data = (data + 1.0) / 2.0
 
         plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
 
@@ -205,6 +207,6 @@ class FlowTrainer(pl.LightningModule):
         """
         # create the optimizer
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        optimizer = AdamWScheduleFree(self.parameters(), lr=1e-4)
+        optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer
