@@ -22,6 +22,8 @@ from schedulefree import AdamWScheduleFree
 
 from matchingflowexp import dit_models
 
+IMAGE_SIZE = 32
+
 PI = 3.141592653589
 
 
@@ -60,7 +62,7 @@ class FlowTrainer(pl.LightningModule):
         self.vae.eval()
 
         # create the model
-        self.model = dit_models.DiT_models["DiT-S/4"](input_size=32, in_channels=4)
+        self.model = dit_models.DiT_models["DiT-S/4"](input_size=IMAGE_SIZE, in_channels=4)
 
         # self.model = torch.compile(self.model)
 
@@ -153,7 +155,7 @@ class FlowTrainer(pl.LightningModule):
         Method to generate some images.
         """
         # init the prior
-        prior_t = torch.randn(1, self.nb_channel, 64, 64).to(self.device)
+        prior_t = torch.randn(1, self.nb_channel, IMAGE_SIZE, IMAGE_SIZE).to(self.device)
 
         # choose a random int between 0 and 1000
         y = torch.randint(0, 1000, (1,)).to(self.device)
