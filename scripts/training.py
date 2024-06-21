@@ -22,7 +22,7 @@ torch.set_float32_matmul_precision("medium")
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv4"
+NOM_MODELE = "matchingflowv6"
 DIR_TB = CURRENT_DIR + "tb_logs/"
 
 # Register callbacks
@@ -31,7 +31,7 @@ class MyFairRequeue(Callback):
     Callback to stop the training to requeue the job
     """
 
-    def __init__(self, dir_weights, prefix, max_duration_seconds=5000):
+    def __init__(self, dir_weights, prefix, max_duration_seconds=7000):
         self.max_duration_seconds = max_duration_seconds
         self.dir = dir_weights
         self.prefix = prefix
@@ -89,7 +89,6 @@ if __name__ == "__main__":
     train_dataset = ds.ImageNet64(
         root=CURRENT_DIR + "data",
         train=True,
-        transform=ds.DEFAULT_TRANSFORM,
     )
 
     batch_size = 128
@@ -97,14 +96,14 @@ if __name__ == "__main__":
         train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
     )
 
-    model = FlowTrainer(save_dir=CURRENT_DIR + "results/")
+    model = FlowTrainer(save_dir=CURRENT_DIR + "resultsv2/")
 
     # compile the model
     # model.compile()
 
     # wandb logger
     logger = None  # .loggers.WandbLogger(project="matchingflowimagenet")
-    tb_logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.4")
+    tb_logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.7")
 
     # get last checkpoint (check the NOM_MODELE and take the last created)
     last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
@@ -117,11 +116,11 @@ if __name__ == "__main__":
     checkpoint_model = MyFairRequeue(
         DIR_WEIGHTS,
         NOM_MODELE,
-        max_duration_seconds=5000,
+        max_duration_seconds=7000,
     )
 
     trainer = pl.Trainer(
-        max_time={"hours": 48},
+        max_time={"hours": 70},
         logger=logger,
         gradient_clip_val=1.0,
         precision="16",

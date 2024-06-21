@@ -62,7 +62,7 @@ class FlowTrainer(pl.LightningModule):
         self.vae.eval()
 
         # create the model
-        self.model = dit_models.DiT_models["DiT-S/4"](input_size=IMAGE_SIZE, in_channels=4)
+        self.model = dit_models.DiT_models["DiT-B/4"](input_size=IMAGE_SIZE, in_channels=4)
 
         # self.model = torch.compile(self.model)
 
@@ -103,10 +103,6 @@ class FlowTrainer(pl.LightningModule):
         """
         # we get the data from the batch
         image, labels = batch
-
-        # preprocess image with vae
-        with torch.no_grad():
-            image = self.vae.encode(image).latent_dist.sample().detach()
 
         batch_size = image.shape[0]
         img_w = image.shape[2]
@@ -178,9 +174,9 @@ class FlowTrainer(pl.LightningModule):
 
         # get the epoch number
         epoch = self.current_epoch
-        self.save_image(image, epoch)
+        self.save_image(image, epoch, y.item())
 
-    def save_image(self, data, i):
+    def save_image(self, data, i, class_attribute):
         """
         Saves the image.
         """
@@ -195,10 +191,10 @@ class FlowTrainer(pl.LightningModule):
         plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
 
         # title
-        plt.title(f"data = {i}")
+        plt.title(f"data = {class_attribute}")
 
         # save the figure
-        plt.savefig(self.save_dir + f"data_{i}.png")
+        plt.savefig(self.save_dir + f"data_{i}_{class_attribute}.png")
 
         # close the figure
         plt.close()
