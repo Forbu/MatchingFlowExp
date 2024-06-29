@@ -96,7 +96,8 @@ class FlowTrainer(pl.LightningModule):
 
         return w_t, alpha_t, alpha_t_dt
 
-    def sampling_fromlogitnormal(self, )
+    def sampling_fromlogitnormal(self, ):
+        pass
 
     def training_step(self, batch, _):
         """
@@ -109,7 +110,7 @@ class FlowTrainer(pl.LightningModule):
         img_w = image.shape[2]
 
         # now we need to select a random time step between 0 and 1 for all the batch
-        t = torch.rand(batch_size, 1).float()
+        t = torch.rand(batch_size, 1, 1, 1).float()
         t = t.to(self.device)
 
         # TODO later sample from logitnormal distribution
@@ -117,15 +118,17 @@ class FlowTrainer(pl.LightningModule):
         # we generate the prior dataset (gaussian noise)
         prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
 
-        gt = (1 - t) * prior + t * image
+        gt = t * prior + (1. - t) * image
 
-        noise_forecast = self.model(gt, t.squeeze(1), labels.long())
+
+        noise_forecast = self.model(gt, t.squeeze(), labels.long())
 
         loss = F.mse_loss(
             noise_forecast[:, : self.nb_channel, :, :], prior, reduction="none"
         )
 
-        weight_ponderation = t / (1. - t) * 2 * 1./(1. - t)
+        weight_ponderation = 1. / (1. - t) * 2 * 1./(1. - t)
+        weight_ponderation = weight_ponderation.clamp(0., 100)
 
         loss = loss * weight_ponderation.unsqueeze(1).unsqueeze(1)
         loss = torch.mean(loss)
@@ -152,13 +155,13 @@ class FlowTrainer(pl.LightningModule):
         # choose a random int between 0 and 1000
         y = torch.randint(0, 1000, (1,)).to(self.device)
 
-        for i in range(self.nb_time_steps):
-            t = torch.ones((1)).to(self.device)
+        for i in range(1, self.nb_time_steps):
+            t = torch.ones((1, 1, 1, 1)).to(self.device)
             t = 1. - t * i / self.nb_time_steps
 
-            noise_estimation = self.model(prior_t, t, y)
+            noise_estimation = self.model(prior_t, t.squeeze(1).squeeze(1).squeeze(1), y)
 
-            u_theta = - 1./ (1. - t) * prior_t - t / (1. - t) * noise_estimation
+            u_theta = - 1./ (1. - t) * prior_t + 0.5 / (1. - t) * noise_estimation[:, : self.nb_channel, :, :]
 
             prior_t = prior_t - u_theta * 1 / self.nb_time_steps
 
@@ -198,7 +201,7 @@ class FlowTrainer(pl.LightningModule):
         Configure the optimizer.
         """
         # create the optimizer
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
         #optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer
