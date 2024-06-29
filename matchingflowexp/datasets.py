@@ -37,7 +37,7 @@ class ImageNet64(data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        img = torch.tensor(self.dataset[index]["latents"])
+        img = torch.tensor(self.dataset[index]["latents"]) * 0.18
         target = self.dataset[index]["label_latent"]
 
         if self.target_transform is not None:

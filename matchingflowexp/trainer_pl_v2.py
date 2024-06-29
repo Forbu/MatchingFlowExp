@@ -18,7 +18,6 @@ import torch.nn.functional as F
 import lightning.pytorch as pl
 
 from diffusers.models import AutoencoderKL
-from schedulefree import AdamWScheduleFree
 
 from matchingflowexp import dit_models
 
@@ -97,6 +96,8 @@ class FlowTrainer(pl.LightningModule):
 
         return w_t, alpha_t, alpha_t_dt
 
+    def sampling_fromlogitnormal(self, )
+
     def training_step(self, batch, _):
         """
         Training step.
@@ -111,27 +112,22 @@ class FlowTrainer(pl.LightningModule):
         t = torch.rand(batch_size, 1).float()
         t = t.to(self.device)
 
-        w_t, alpha_t, alpha_t_dt = self.compute_params_from_t(t)
+        # TODO later sample from logitnormal distribution
 
         # we generate the prior dataset (gaussian noise)
         prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
 
-        alpha_t = alpha_t.unsqueeze(2).unsqueeze(3)
+        gt = (1 - t) * prior + t * image
 
-        gt = (1 - alpha_t) * prior + alpha_t * image
-
-        # TODO add some noise to gt
-        gt = gt + self.noise_proba * torch.randn(
-            batch_size, self.nb_channel, img_w, img_w
-        ).to(self.device)
-
-        result_unnoise = self.model(gt, t.squeeze(1), labels.long())
+        noise_forecast = self.model(gt, t.squeeze(1), labels.long())
 
         loss = F.mse_loss(
-            result_unnoise[:, : self.nb_channel, :, :], image, reduction="none"
+            noise_forecast[:, : self.nb_channel, :, :], prior, reduction="none"
         )
 
-        loss = loss * w_t.unsqueeze(1).unsqueeze(1)
+        weight_ponderation = t / (1. - t) * 2 * 1./(1. - t)
+
+        loss = loss * weight_ponderation.unsqueeze(1).unsqueeze(1)
         loss = torch.mean(loss)
 
         self.log("loss_training", loss.cpu().detach().numpy().item())
@@ -158,17 +154,13 @@ class FlowTrainer(pl.LightningModule):
 
         for i in range(self.nb_time_steps):
             t = torch.ones((1)).to(self.device)
-            t = t * i / self.nb_time_steps
+            t = 1. - t * i / self.nb_time_steps
 
-            w_t, alpha_t, alpha_t_dt = self.compute_params_from_t(t)
+            noise_estimation = self.model(prior_t, t, y)
 
-            g1_estimation = self.model(prior_t, t, y)
+            u_theta = - 1./ (1. - t) * prior_t - t / (1. - t) * noise_estimation
 
-            u_theta = w_t.unsqueeze(1).unsqueeze(1) * (
-                g1_estimation[:, : self.nb_channel, :, :] - prior_t
-            )
-
-            prior_t = prior_t + u_theta * 1 / self.nb_time_steps
+            prior_t = prior_t - u_theta * 1 / self.nb_time_steps
 
         image = self.vae.decode(prior_t / 0.18).sample
 
@@ -206,7 +198,7 @@ class FlowTrainer(pl.LightningModule):
         Configure the optimizer.
         """
         # create the optimizer
-        # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
+        #optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer
