@@ -9,3 +9,4 @@ numpy
 matplotlib
 accelerate
 diffusers
+torchmetrics

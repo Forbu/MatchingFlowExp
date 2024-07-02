@@ -116,7 +116,7 @@ if __name__ == "__main__":
     #     model.load_state_dict(torch.load(last_checkpoint)["state_dict"])
     last_checkpoint = None
 
-        # define the checkpoint callback
+    # define the checkpoint callback
     # checkpoint_model = MyFairRequeue(
     #     DIR_WEIGHTS,
     #     NOM_MODELE,

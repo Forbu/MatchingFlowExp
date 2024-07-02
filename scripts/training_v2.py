@@ -21,11 +21,13 @@ from matchingflowexp.trainer_pl_v2 import FlowTrainer
 
 torch.set_float32_matmul_precision("medium")
 
-CURRENT_DIR = "/teamspace/studios/this_studio/MatchingFlowExp/"
+CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv2v1"
+NOM_MODELE = "matchingflowv2v5"
 DIR_TB = CURRENT_DIR + "tb_logs/"
+VERSION_TB = "5.0"
+
 
 # Register callbacks
 class MyFairRequeue(Callback):
@@ -88,54 +90,60 @@ def get_last_checkpoint(dir_weight, nom_model):
 
 
 if __name__ == "__main__":
+    batch_size = 128
+
     train_dataset = ds.ImageNet64(
         root=CURRENT_DIR + "data",
         train=True,
     )
 
-    batch_size = 128
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
     )
 
-    model = FlowTrainer(save_dir=CURRENT_DIR + "resultsv2/")
+    val_dataset = ds.ImageNet64(
+        root=CURRENT_DIR + "data",
+        train=False
+    )
+
+    validation_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=4
+    )
+
+    model = FlowTrainer(save_dir=CURRENT_DIR + "resultsv3/")
 
     # compile the model
     # model.compile()
 
-    # wandb logger
-    logger = None  # .loggers.WandbLogger(project="matchingflowimagenet")
-    #logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.7")
-    logger = pl.loggers.WandbLogger(project="matchingflowimagenet")
+    logger = TensorBoardLogger(DIR_TB, name="matchingflow", version=VERSION_TB)
 
     # get last checkpoint (check the NOM_MODELE and take the last created)
-    last_checkpoint = "/teamspace/studios/this_studio/MatchingFlowExp/models/epoch=3-step=10012.ckpt"
-    #get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
+    # init_model = "/home/saved_model/epoch=32-step=82554.ckpt"
+    # model.load_state_dict(torch.load(init_model)["state_dict"])
 
-    # # if there is a checkpoint, load it
+    last_checkpoint = None
+    last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
+
     if last_checkpoint is not None:
-         model.load_state_dict(torch.load(last_checkpoint)["state_dict"])
-    #last_checkpoint = None
+        model.load_state_dict(torch.load(last_checkpoint)["state_dict"])
 
-        # define the checkpoint callback
-    # checkpoint_model = MyFairRequeue(
-    #     DIR_WEIGHTS,
-    #     NOM_MODELE,
-    #     max_duration_seconds=7000,
-    # )
-
-    # create a callback
-    checkpoint_callback = ModelCheckpoint(dirpath='models/')
+    # define the checkpoint callback
+    checkpoint_model = MyFairRequeue(
+        DIR_WEIGHTS,
+        NOM_MODELE,
+        max_duration_seconds=7000,
+    )
 
     trainer = pl.Trainer(
-        max_time={"hours": 40},
+        max_time={"hours": 120},
         logger=logger,
-        accelerator="auto", devices="auto",
+        accelerator="auto",
+        devices="auto",
         gradient_clip_val=1.0,
-        precision="16-mixed",
-        callbacks=[checkpoint_callback],
-        #limit_train_batches=0.01,
+        # precision="16-mixed",
+        callbacks=[checkpoint_model],
         enable_progress_bar=True,
-        strategy='ddp_find_unused_parameters_true',
+        strategy="ddp_find_unused_parameters_true",
+        accumulate_grad_batches=2,
     )
-    trainer.fit(model, train_loader, ckpt_path=last_checkpoint)
+    trainer.fit(model, train_loader, validation_loader, ckpt_path=last_checkpoint)

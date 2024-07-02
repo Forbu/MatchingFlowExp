@@ -5,4 +5,4 @@ pip install -r requirements.txt
 pip uninstall Pillow --yes
 pip install Pillow==9.4.0
 
-python3 -m scripts.training
+python3 -m scripts.training_v2

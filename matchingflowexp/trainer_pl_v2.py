@@ -18,6 +18,7 @@ import torch.nn.functional as F
 import lightning.pytorch as pl
 
 from diffusers.models import AutoencoderKL
+from torchmetrics import MeanSquaredError
 
 from matchingflowexp import dit_models
 
@@ -71,6 +72,9 @@ class FlowTrainer(pl.LightningModule):
         self.loss_fn = nn.MSELoss()
 
         # self.apply(init_weights)
+        # metrics to compute the performance in DB
+        self.mean_squared_error_val = MeanSquaredError()
+        self.mean_squared_error_train = MeanSquaredError()
 
     def forward(self, data, t, y):
         """
@@ -80,28 +84,41 @@ class FlowTrainer(pl.LightningModule):
 
         return result_logit
 
-    def compute_loss(self, logits, data, init_data):
-        """
-        Computes the loss.
-        """
-        return
-
-    def compute_params_from_t(self, t):
-        # we generate alpha_t = 1 - cos2(t * pi/2)
-        alpha_t = 1 - torch.cos(t * PI / 2) ** 2
-        alpha_t_dt = PI * torch.cos(PI / 2 * t) * torch.sin(PI / 2 * t)
-
-        w_t = alpha_t_dt / (1 - alpha_t)
-
-        # make w_t min of 0.005 and max of 1.5
-        w_t = torch.clamp(w_t, min=0.005, max=1.5)
-
-        return w_t, alpha_t, alpha_t_dt
-
     def sampling_fromlogitnormal(
         self,
     ):
         pass
+
+    def compute_loss(self, t, prior, image, labels, train=True):
+        """
+        Loss compute from raw prior and noise and labels
+        """
+        gt = t * prior + (1.0 - t) * image
+        weight_ponderation = torch.sqrt(1.0 / (1.0 - t) * 2 * 1.0 / (1.0 - t))
+        weight_ponderation = weight_ponderation.clamp(0.0, 100.0)
+
+        noise_forecast = self.model(gt, t.squeeze(), labels.long())
+
+        loss = F.mse_loss(
+            weight_ponderation * noise_forecast[:, : self.nb_channel, :, :],
+            weight_ponderation * prior,
+            reduction="mean",
+        )
+
+        if train:
+            self.mean_squared_error_train(
+                weight_ponderation * noise_forecast[:, : self.nb_channel, :, :],
+                weight_ponderation * prior,
+            )
+
+            return loss
+        else:
+            self.mean_squared_error_val(
+                weight_ponderation * noise_forecast[:, : self.nb_channel, :, :],
+                weight_ponderation * prior,
+            )
+
+            return loss
 
     def training_step(self, batch, _):
         """
@@ -118,35 +135,76 @@ class FlowTrainer(pl.LightningModule):
         t = t.to(self.device)
 
         # TODO later sample from logitnormal distribution
-
         # we generate the prior dataset (gaussian noise)
         prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
 
-        gt = t * prior + (1.0 - t) * image
-
-        noise_forecast = self.model(gt, t.squeeze(), labels.long())
-
-        loss = F.mse_loss(
-            noise_forecast[:, : self.nb_channel, :, :], prior, reduction="none"
-        )
-
-        weight_ponderation = 1.0 / (1.0 - t) * 2 * 1.0 / (1.0 - t)
-        weight_ponderation = weight_ponderation.clamp(0.0, 100)
-
-        loss = loss * weight_ponderation.unsqueeze(1).unsqueeze(1)
-        loss = torch.mean(loss)
+        loss = self.compute_loss(t, prior, image, labels)
 
         self.log("loss_training", loss.cpu().detach().numpy().item())
 
         return loss
 
+    def validation_step(self, batch, _):
+        """
+        Training step.
+        """
+        # we get the data from the batch
+        image, labels = batch
+
+        batch_size = image.shape[0]
+        img_w = image.shape[2]
+
+        # now we need to select a random time step between 0 and 1 for all the batch
+        t_level = torch.arange(start=1, end=9, step=1).float()/10.  # 8 level
+        t = torch.cat([t_level for _ in range(int(batch_size / 8.0))], axis=0).float()
+        t = t.unsqueeze(1).unsqueeze(1).unsqueeze(1)
+
+        t = t.to(self.device)
+
+        # TODO later sample from logitnormal distribution
+        # we generate the prior dataset (gaussian noise)
+        prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
+
+        loss = self.compute_loss(t, prior, image, labels, train=False)
+
+        return loss
+
+    def on_validation_epoch_end(self):
+        """
+        We log the metrics at the end of the epoch
+        """
+
+        # we log the metrics
+        self.log(
+            name="val_rmse",
+            value=torch.sqrt(self.mean_squared_error_val.compute().detach()),
+            sync_dist=True,
+        )
+
+        # we reset the metrics
+        self.mean_squared_error_val.reset()
+
     # on training end
     def on_train_epoch_end(self):
+        """
+        We generate one sample and also 
+        register the rsme perf
+        """
         # we should generate some images
         self.eval()
         with torch.no_grad():
             self.generate()
         self.train()
+
+        # we log the metrics
+        self.log(
+            name="train_rmse",
+            value=torch.sqrt(self.mean_squared_error_train.compute().detach()),
+            sync_dist=True,
+        )
+
+        # we reset the metrics
+        self.mean_squared_error_train.reset()
 
     def generate(self):
         """
@@ -169,8 +227,8 @@ class FlowTrainer(pl.LightningModule):
             )
 
             u_theta = (
-                -1. / (1. - t) * prior_t
-                + 1. / (1. - t) * noise_estimation[:, : self.nb_channel, :, :]
+                -1.0 / (1.0 - t) * prior_t
+                + 1.0 / (1.0 - t) * noise_estimation[:, : self.nb_channel, :, :]
             )
 
             prior_t = prior_t - u_theta * 1 / self.nb_time_steps
