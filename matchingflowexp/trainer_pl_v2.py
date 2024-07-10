@@ -59,7 +59,7 @@ class FlowTrainer(pl.LightningModule):
         self.save_dir = save_dir
         self.nb_channel = 4
 
-        vae_model = "stabilityai/sd-vae-ft-ema"
+        vae_model = "stabilityai/sdxl-vae"
         self.vae = AutoencoderKL.from_pretrained(vae_model)
         self.vae.eval()
 
