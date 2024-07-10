@@ -15,6 +15,7 @@ import datasets
 from diffusers.image_processor import VaeImageProcessor
 
 
+
 class ImageNet64(data.Dataset):
     def __init__(
         self, root="./data", train=True, transform=None, target_transform=None

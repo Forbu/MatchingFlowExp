@@ -8,16 +8,18 @@ It will be imagenet 64x64 (to reduce the computation time)
 We use pytorch lightning for the training
 """
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+from schedulefree import AdamWScheduleFree
 import lightning.pytorch as pl
 
 from diffusers.models import AutoencoderKL
+from diffusers.image_processor import VaeImageProcessor
+
 from torchmetrics import MeanSquaredError
 
 from matchingflowexp import dit_models
@@ -125,7 +127,10 @@ class FlowTrainer(pl.LightningModule):
         Training step.
         """
         # we get the data from the batch
-        image, labels = batch
+        image, labels = (
+            batch["vae_output"].reshape(-1, 4, 32, 32).to(self.device).float(),
+            batch["label_as_text"],
+        )
 
         batch_size = image.shape[0]
         img_w = image.shape[2]
@@ -155,7 +160,7 @@ class FlowTrainer(pl.LightningModule):
         img_w = image.shape[2]
 
         # now we need to select a random time step between 0 and 1 for all the batch
-        t_level = torch.arange(start=1, end=9, step=1).float()/10.  # 8 level
+        t_level = torch.arange(start=1, end=9, step=1).float() / 10.0  # 8 level
         t = torch.cat([t_level for _ in range(int(batch_size / 8.0))], axis=0).float()
         t = t.unsqueeze(1).unsqueeze(1).unsqueeze(1)
 
@@ -187,7 +192,7 @@ class FlowTrainer(pl.LightningModule):
     # on training end
     def on_train_epoch_end(self):
         """
-        We generate one sample and also 
+        We generate one sample and also
         register the rsme perf
         """
         # we should generate some images
@@ -233,7 +238,7 @@ class FlowTrainer(pl.LightningModule):
 
             prior_t = prior_t - u_theta * 1 / self.nb_time_steps
 
-        image = self.vae.decode(prior_t / 0.18).sample
+        image = self.vae.decode(prior_t).sample
 
         # get the epoch number
         epoch = self.current_epoch
@@ -246,30 +251,20 @@ class FlowTrainer(pl.LightningModule):
         # plot the data
         # the data has been normalized
         # we clip the data to 0 and 1
-        data = torch.clamp(data, -1, 1)
+        img = VaeImageProcessor().postprocess(
+            image=data.detach(), do_denormalize=[True, True]
+        )[0]
 
-        # resize the data to be between 0 and 1
-        data = (data + 1.0) / 2.0
+        name_image = self.save_dir + f"data_{i}_{class_attribute}.png"
 
-        plt.imshow(data.squeeze().cpu().numpy().transpose(1, 2, 0))
-
-        # title
-        plt.title(f"data = {class_attribute}")
-
-        # test
-
-        # save the figure
-        plt.savefig(self.save_dir + f"data_{i}_{class_attribute}.png")
-
-        # close the figure
-        plt.close()
+        img.save(name_image)
 
     def configure_optimizers(self):
         """
         Configure the optimizer.
         """
         # create the optimizer
-        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
-        # optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
+        # optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
+        optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer

@@ -10,3 +10,6 @@ matplotlib
 accelerate
 diffusers
 torchmetrics
+hf_transfer
+Cython
+streaming
