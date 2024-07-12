@@ -11,12 +11,14 @@ import torch
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import ModelCheckpoint
+# from lightning.pytorch.callbacks import ModelCheckpoint
 
 from matchingflowexp import datasets as ds
 from torch.utils.data import DataLoader
 import lightning.pytorch as pl
 from matchingflowexp.trainer_pl_v2 import FlowTrainer
+
+from matchingflowexp.datasets_streaming import generate_streaming_dataset
 
 
 torch.set_float32_matmul_precision("medium")
@@ -24,9 +26,10 @@ torch.set_float32_matmul_precision("medium")
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv2v5"
+NOM_MODELE = "matchingflowv5v1"
 DIR_TB = CURRENT_DIR + "tb_logs/"
-VERSION_TB = "5.0"
+VERSION_TB = "10.0"
+IMAGE_SUB_FOLDER = "resultsv5/"
 
 
 # Register callbacks
@@ -92,25 +95,22 @@ def get_last_checkpoint(dir_weight, nom_model):
 if __name__ == "__main__":
     batch_size = 128
 
-    train_dataset = ds.ImageNet64(
-        root=CURRENT_DIR + "data",
-        train=True,
+    # train_dataset = ds.ImageNet64(
+    #     root=CURRENT_DIR + "data",
+    #     train=True,
+    # )
+
+    train_dataset = generate_streaming_dataset(
+        remote_train_dir="./vae_mds",
+        local_train_dir="./local_train_dir",
+        batch_size=batch_size,
     )
 
-    train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
-    )
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4)
 
-    val_dataset = ds.ImageNet64(
-        root=CURRENT_DIR + "data",
-        train=False
-    )
+    validation_loader = None
 
-    validation_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, num_workers=4
-    )
-
-    model = FlowTrainer(save_dir=CURRENT_DIR + "resultsv3/")
+    model = FlowTrainer(save_dir=CURRENT_DIR + IMAGE_SUB_FOLDER)
 
     # compile the model
     # model.compile()

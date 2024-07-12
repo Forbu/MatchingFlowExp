@@ -1,3 +1,4 @@
+Cython
 datasets
 timm
 wandb
@@ -12,4 +13,4 @@ diffusers
 torchmetrics
 hf_transfer
 Cython
-streaming
+mosaicml-streaming

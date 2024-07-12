@@ -27,20 +27,24 @@ class uint8(Encoding):
         return obj.tobytes()
 
     def decode(self, data: bytes) -> Any:
-        x=  np.frombuffer(data, np.uint8).astype(np.float32)
+        x = np.frombuffer(data, np.uint8).astype(np.float32)
         return (x / 255.0 - 0.5) * 24.0
 
 
-def generate_streaming_dataset(remote_train_dir="./vae_mds", local_train_dir = "./local_train_dir", batch_size=32):
-
+def generate_streaming_dataset(
+    remote_train_dir="./vae_mds", local_train_dir="./local_train_dir", batch_size=32, split=None
+):
+    """
+    In case of multinode training
+    """
     _encodings["uint8"] = uint8
 
     return StreamingDataset(
         local=local_train_dir,
         remote=remote_train_dir,
-        split=None,
+        split=split,
         shuffle=True,
         shuffle_algo="naive",
         num_canonical_nodes=1,
-        batch_size = batch_size
+        batch_size=batch_size,
     )

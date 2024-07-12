@@ -129,8 +129,12 @@ class FlowTrainer(pl.LightningModule):
         # we get the data from the batch
         image, labels = (
             batch["vae_output"].reshape(-1, 4, 32, 32).to(self.device).float(),
-            batch["label_as_text"],
+            batch["label"],
         )
+
+        labels = [int(class_image) for class_image in labels]
+        labels = torch.tensor(labels).to(self.device)
+
 
         batch_size = image.shape[0]
         img_w = image.shape[2]
@@ -154,7 +158,15 @@ class FlowTrainer(pl.LightningModule):
         Training step.
         """
         # we get the data from the batch
-        image, labels = batch
+        image, labels = (
+            batch["vae_output"].reshape(-1, 4, 32, 32).to(self.device).float(),
+            batch["label"],
+        )
+
+        labels = [int(class_image) for class_image in labels]
+        labels = torch.tensor(labels).to(self.device)
+
+
 
         batch_size = image.shape[0]
         img_w = image.shape[2]

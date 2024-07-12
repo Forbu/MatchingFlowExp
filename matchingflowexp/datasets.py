@@ -11,7 +11,7 @@ import torch.utils.data as data
 import numpy as np
 import os
 from PIL import Image
-import datasets
+import datasets as hf_datasets
 from diffusers.image_processor import VaeImageProcessor
 
 
@@ -28,7 +28,7 @@ class ImageNet64(data.Dataset):
         self.vaeprocessor = VaeImageProcessor()
 
         ## load datasets from huggingface
-        self.dataset = datasets.load_dataset(
+        self.dataset = hf_datasets.load_dataset(
             "Forbu14/imagenet-1k-latent",
             split="train" if self.train else "validation",
             cache_dir=self.root,
