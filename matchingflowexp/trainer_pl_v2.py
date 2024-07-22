@@ -8,7 +8,7 @@ It will be imagenet 64x64 (to reduce the computation time)
 We use pytorch lightning for the training
 """
 
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -64,7 +64,7 @@ class FlowTrainer(pl.LightningModule):
         self.vae.eval()
 
         # create the model
-        self.model = dit_models.DiT_models["DiT-B/4"](
+        self.model = dit_models.DiT_models["DiT-L/4"](
             input_size=IMAGE_SIZE, in_channels=4
         )
 
@@ -97,7 +97,7 @@ class FlowTrainer(pl.LightningModule):
         """
         gt = t * prior + (1.0 - t) * image
         weight_ponderation = torch.sqrt(1.0 / (1.0 - t) * 2 * 1.0 / (1.0 - t))
-        weight_ponderation = weight_ponderation.clamp(0.0, 100.0)
+        weight_ponderation = weight_ponderation.clamp(1., 100.0)
 
         noise_forecast = self.model(gt, t.squeeze(), labels.long())
 
@@ -135,7 +135,6 @@ class FlowTrainer(pl.LightningModule):
         labels = [int(class_image) for class_image in labels]
         labels = torch.tensor(labels).to(self.device)
 
-
         batch_size = image.shape[0]
         img_w = image.shape[2]
 
@@ -165,8 +164,6 @@ class FlowTrainer(pl.LightningModule):
 
         labels = [int(class_image) for class_image in labels]
         labels = torch.tensor(labels).to(self.device)
-
-
 
         batch_size = image.shape[0]
         img_w = image.shape[2]

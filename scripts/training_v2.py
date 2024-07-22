@@ -26,10 +26,10 @@ torch.set_float32_matmul_precision("medium")
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv5v1"
+NOM_MODELE = "matchingflowv6v1"
 DIR_TB = CURRENT_DIR + "tb_logs/"
-VERSION_TB = "10.0"
-IMAGE_SUB_FOLDER = "resultsv5/"
+VERSION_TB = "11.0"
+IMAGE_SUB_FOLDER = "resultsv6/"
 
 
 # Register callbacks
@@ -93,7 +93,7 @@ def get_last_checkpoint(dir_weight, nom_model):
 
 
 if __name__ == "__main__":
-    batch_size = 128
+    batch_size = 64
 
     # train_dataset = ds.ImageNet64(
     #     root=CURRENT_DIR + "data",
@@ -135,15 +135,16 @@ if __name__ == "__main__":
     )
 
     trainer = pl.Trainer(
-        max_time={"hours": 120},
+        max_time={"hours": 200},
         logger=logger,
         accelerator="auto",
         devices="auto",
         gradient_clip_val=1.0,
         # precision="16-mixed",
+        # limit_train_batches=100,
         callbacks=[checkpoint_model],
         enable_progress_bar=True,
         strategy="ddp_find_unused_parameters_true",
-        accumulate_grad_batches=2,
+        accumulate_grad_batches=4,
     )
     trainer.fit(model, train_loader, validation_loader, ckpt_path=last_checkpoint)

@@ -21,6 +21,8 @@ from typing import Any
 import torch
 from streaming import StreamingDataset
 
+import streaming
+streaming.base.util.clean_stale_shared_memory()
 
 class uint8(Encoding):
     def encode(self, obj: Any) -> bytes:
