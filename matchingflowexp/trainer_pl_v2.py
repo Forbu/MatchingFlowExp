@@ -97,7 +97,7 @@ class FlowTrainer(pl.LightningModule):
         """
         gt = t * prior + (1.0 - t) * image
         weight_ponderation = torch.sqrt(1.0 / (1.0 - t) * 2 * 1.0 / (1.0 - t))
-        weight_ponderation = weight_ponderation.clamp(1., 100.0)
+        weight_ponderation = weight_ponderation.clamp(1.0, 100.0)
 
         noise_forecast = self.model(gt, t.squeeze(), labels.long())
 
@@ -252,6 +252,47 @@ class FlowTrainer(pl.LightningModule):
         # get the epoch number
         epoch = self.current_epoch
         self.save_image(image, epoch, y.item())
+
+    def generate_odeint(self):
+        """
+        Method to generate some images using odeint
+        """
+        self.eval()
+
+        from torchdiffeq import odeint
+
+        y = torch.randint(0, 1000, (1,)).to(self.device)
+        times = torch.linspace(0.0, 1.0, 36, device=self.device)
+
+        def ode_fn(t, x):
+            t_inverse = 1.0 - t
+
+            u_t = (
+                1.0
+                / (1.0 - t_inverse + 0.0001)
+                * (
+                    x
+                    - self.model(x, t_inverse.squeeze(1).squeeze(1).squeeze(1), y)[
+                        :, : self.nb_channel, :, :
+                    ]
+                )
+            )
+
+            return u_t
+
+        prior_t = torch.randn(1, self.nb_channel, IMAGE_SIZE, IMAGE_SIZE).to(
+            self.device
+        )
+
+        result = odeint(ode_fn, prior_t, times, atol=1e-5, rtol=1e-5, method="rk4")
+
+        image = self.vae.decode(result[-1]).sample
+
+        # get the epoch number
+        epoch = self.current_epoch
+        self.save_image(image, epoch, y.item())
+
+        self.train()
 
     def save_image(self, data, i, class_attribute):
         """
