@@ -36,7 +36,7 @@ To be remove
 
 - We have less proper performance than the DiT paper (I discover that every parameters is important ...)
 
-- AutoEncoder matter (vae vs vae sdxl), learning rate matte, architecture (B vs L) obviously matter, dataset matter, sampling technics matter etc
+- AutoEncoder matter (vae vs vae sdxl), learning rate matter, architecture (B vs L) obviously matter, dataset matter, sampling technics matter etc
 
 TODO to improve the performances :
 
