@@ -34,7 +34,9 @@ Some comments here :
 - Some spikes in the training loss are due to the fact that there some images that are only in black and white (anomalies ...)
 To be remove
 
-- We have less proper performance than the DiT paper 
+- We have less proper performance than the DiT paper (I discover that every parameters is important ...)
+
+- AutoEncoder matter (vae vs vae sdxl), learning rate matte, architecture (B vs L) obviously matter, dataset matter, sampling technics matter etc
 
 TODO to improve the performances :
 
