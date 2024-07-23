@@ -22,6 +22,9 @@ from diffusers.image_processor import VaeImageProcessor
 
 from torchmetrics import MeanSquaredError
 
+# for sampling
+from torchdiffeq import odeint
+
 from matchingflowexp import dit_models
 
 IMAGE_SIZE = 32
@@ -207,7 +210,7 @@ class FlowTrainer(pl.LightningModule):
         # we should generate some images
         self.eval()
         with torch.no_grad():
-            self.generate()
+            self.generate_odeint()
         self.train()
 
         # we log the metrics
@@ -259,13 +262,15 @@ class FlowTrainer(pl.LightningModule):
         """
         self.eval()
 
-        from torchdiffeq import odeint
-
         y = torch.randint(0, 1000, (1,)).to(self.device)
-        times = torch.linspace(0.0, 1.0, 36, device=self.device)
+        times = torch.linspace(0.0, 1.0, 100, device=self.device)
 
         def ode_fn(t, x):
             t_inverse = 1.0 - t
+
+            # t_inverse is of shape [], we need it to be of shape [1, 1, 1, 1]
+            t_inverse = torch.tensor([t_inverse]).to(self.device)
+            t_inverse = t_inverse.unsqueeze(1).unsqueeze(1).unsqueeze(1)
 
             u_t = (
                 1.0
@@ -284,7 +289,8 @@ class FlowTrainer(pl.LightningModule):
             self.device
         )
 
-        result = odeint(ode_fn, prior_t, times, atol=1e-5, rtol=1e-5, method="rk4")
+        with torch.no_grad():
+            result = odeint(ode_fn, prior_t, times, atol=1e-5, rtol=1e-5, method="rk4")
 
         image = self.vae.decode(result[-1]).sample
 

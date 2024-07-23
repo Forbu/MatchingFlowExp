@@ -134,6 +134,11 @@ if __name__ == "__main__":
         max_duration_seconds=7000,
     )
 
+    # to cuda
+    model.to("cuda")
+    model.generate_odeint()
+    exit()
+
     trainer = pl.Trainer(
         max_time={"hours": 200},
         logger=logger,
