@@ -1,4 +1,7 @@
+Toy project to do image generation on a low budget GPU (<200h GPU per run)
+
 # MatchingFlowExp
+
 Repo for experiences around matching flow / generative modelling with imagenet
 
 This setup use two things :
@@ -40,4 +43,8 @@ TODO to improve the performances :
 - [ ] Time sampling should be done as in Stable diffusion 3 with lognormal proba
 
 - [ ] We should use muP scaling law to make the training optimal at higher dimension
+
+- [ ] Use torch.compile to accelerate training (I was told it's 10% time improvment)
+
+
 
