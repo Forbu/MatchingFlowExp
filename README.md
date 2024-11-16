@@ -42,7 +42,7 @@ TODO to improve the performances :
 
 - [x] Making the inference sampling with other scheme that euler (done)
 
-- [ ] Training with classifier-free guidance for improve sampling efficiency
+- [ ] Training with classifier-free guidance for improve inference performance.
 
 - [ ] Time sampling should be done as in Stable diffusion 3 with lognormal proba
 
