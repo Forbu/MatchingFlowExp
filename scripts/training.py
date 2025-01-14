@@ -18,13 +18,14 @@ from torch.utils.data import DataLoader
 import lightning.pytorch as pl
 from matchingflowexp.trainer_pl import FlowTrainer
 
-
 torch.set_float32_matmul_precision("medium")
 
 CURRENT_DIR = "/teamspace/studios/this_studio/MatchingFlowExp/"
+CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-NOM_MODELE = "matchingflowv7"
+VERSION_TB = "0.16"
+NOM_MODELE = "matchingflowv" + VERSION_TB.replace('.', '_')
 DIR_TB = CURRENT_DIR + "tb_logs/"
 
 # Register callbacks
@@ -94,8 +95,10 @@ if __name__ == "__main__":
     )
 
     batch_size = 64
+
+    torch.manual_seed(43)
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True
     )
 
     model = FlowTrainer(save_dir=CURRENT_DIR + "resultsv2/")
@@ -105,23 +108,23 @@ if __name__ == "__main__":
 
     # wandb logger
     logger = None  # .loggers.WandbLogger(project="matchingflowimagenet")
-    #logger = TensorBoardLogger(DIR_TB, name="matchingflow", version="0.7")
-    logger = pl.loggers.WandbLogger(project="matchingflowimagenet")
+    logger = TensorBoardLogger(DIR_TB, name="matchingflow_comeback", version=VERSION_TB)
+    #logger = pl.loggers.WandbLogger(project="matchingflowimagenet")
 
     # get last checkpoint (check the NOM_MODELE and take the last created)
-    # last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
+    last_checkpoint = get_last_checkpoint(DIR_WEIGHTS, NOM_MODELE)
 
     # # if there is a checkpoint, load it
-    # if last_checkpoint is not None:
-    #     model.load_state_dict(torch.load(last_checkpoint)["state_dict"])
-    last_checkpoint = None
+    if last_checkpoint is not None:
+         model.load_state_dict(torch.load(last_checkpoint)["state_dict"])
+    #last_checkpoint = None
 
     # define the checkpoint callback
-    # checkpoint_model = MyFairRequeue(
-    #     DIR_WEIGHTS,
-    #     NOM_MODELE,
-    #     max_duration_seconds=7000,
-    # )
+    checkpoint_model = MyFairRequeue(
+        DIR_WEIGHTS,
+        NOM_MODELE,
+        max_duration_seconds=7000,
+    )
 
     # create a callback
     checkpoint_callback = ModelCheckpoint(dirpath='models/')
@@ -130,8 +133,8 @@ if __name__ == "__main__":
         max_time={"hours": 10},
         logger=logger,
         gradient_clip_val=1.0,
-        precision="16-mixed",
-        callbacks=[checkpoint_callback],
+        #precision="16-mixed",
+        callbacks=[checkpoint_callback, checkpoint_model],
         #limit_train_batches=0.01,
         enable_progress_bar=True,
         strategy='ddp_find_unused_parameters_true',
