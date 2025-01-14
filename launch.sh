@@ -12,4 +12,4 @@ pip3 install Pillow==9.4.0
 # # actual download script. 
 # huggingface-cli download --repo-type dataset cloneofsimo/imagenet.int8 --local-dir ./vae_mds
 
-python3 -m scripts.training_v2
+python3 -m scripts.training

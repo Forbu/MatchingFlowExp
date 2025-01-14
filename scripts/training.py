@@ -24,7 +24,7 @@ CURRENT_DIR = "/teamspace/studios/this_studio/MatchingFlowExp/"
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-VERSION_TB = "0.16"
+VERSION_TB = "0.17"
 NOM_MODELE = "matchingflowv" + VERSION_TB.replace('.', '_')
 DIR_TB = CURRENT_DIR + "tb_logs/"
 
