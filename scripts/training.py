@@ -24,7 +24,7 @@ CURRENT_DIR = "/teamspace/studios/this_studio/MatchingFlowExp/"
 CURRENT_DIR = "/home/"
 
 DIR_WEIGHTS = CURRENT_DIR + "models/"
-VERSION_TB = "0.19"
+VERSION_TB = "0.20"
 NOM_MODELE = "matchingflowv" + VERSION_TB.replace('.', '_')
 DIR_TB = CURRENT_DIR + "tb_logs/"
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         train=True,
     )
 
-    batch_size = 64
+    batch_size = 128
 
     torch.manual_seed(43)
     train_loader = DataLoader(
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     checkpoint_callback = ModelCheckpoint(dirpath='models/')
 
     trainer = pl.Trainer(
-        max_time={"hours": 15},
+        max_time={"hours": 48},
         logger=logger,
         gradient_clip_val=1.0,
         #precision="16-mixed",

@@ -233,7 +233,7 @@ class FlowTrainer(pl.LightningModule):
         Configure the optimizer.
         """
         # create the optimizer
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
         #optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer

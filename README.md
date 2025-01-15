@@ -46,6 +46,8 @@ TODO to improve the performances :
 
 Sampling with classifier-free guidance really seems to improve sampling quality
 
+- [ ] We should add EMA to improve sampling quality
+
 - [ ] Time sampling should be done as in Stable diffusion 3 with lognormal proba
 
 - [ ] We should use muP scaling law to make the training optimal at higher dimension
