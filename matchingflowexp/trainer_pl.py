@@ -169,27 +169,32 @@ class FlowTrainer(pl.LightningModule):
         y = torch.randint(0, 1000, (1,)).to(self.device)
         y_uncond = torch.tensor([1000]).to(self.device)
 
-        for i in range(self.nb_time_steps):
+        epsilon = 0.0001
+
+        for i in range(1, self.nb_time_steps):
+
             t = torch.ones((1, 1, 1, 1)).to(self.device)
             t = 1.0 - t * i / self.nb_time_steps
 
-            noise_estimation = self.model(prior_t, t, y)
+            noise_estimation = self.model(prior_t, t.squeeze(1).squeeze(1).squeeze(1), y)
 
             u_theta = (
-                -1.0 / (1.0 - t) * prior_t
-                + 1.0 / (1.0 - t) * noise_estimation[:, : self.nb_channel, :, :]
+                -1.0 / (1.0 - t + epsilon) * prior_t
+                + 1.0 / (1.0 - t+ epsilon) * noise_estimation[:, : self.nb_channel, :, :]
             )
 
-            noise_estimation_uncond = self.model(prior_t, t, y_uncond)
+            noise_estimation_uncond = self.model(prior_t, t.squeeze(1).squeeze(1).squeeze(1), y_uncond)
 
             u_theta_uncond = (
-                -1.0 / (1.0 - t) * prior_t
-                + 1.0 / (1.0 - t) * noise_estimation_uncond[:, : self.nb_channel, :, :]
+                -1.0 / (1.0 - t+ epsilon) * prior_t
+                + 1.0 / (1.0 - t+ epsilon) * noise_estimation_uncond[:, : self.nb_channel, :, :]
             )
 
             u_theta_cfg = u_theta_uncond + self.cfg_value * (u_theta - u_theta_uncond)
 
             prior_t = prior_t - u_theta_cfg * 1. / self.nb_time_steps
+
+        
 
         image = self.vae.decode(prior_t / 0.18).sample
 
