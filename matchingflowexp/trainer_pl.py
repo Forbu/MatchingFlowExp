@@ -21,6 +21,9 @@ import lightning.pytorch as pl
 from diffusers.models import AutoencoderKL
 from schedulefree import AdamWScheduleFree
 
+# for sampling
+from torchdiffeq import odeint
+
 from matchingflowexp import dit_models
 
 IMAGE_SIZE = 32
@@ -169,7 +172,7 @@ class FlowTrainer(pl.LightningModule):
         # we should generate some images
         self.eval()
         with torch.no_grad():
-            self.generate()
+            self.generate_odeint()
         self.train()
 
     def generate(self):
@@ -222,6 +225,66 @@ class FlowTrainer(pl.LightningModule):
         # get the epoch number
         epoch = self.current_epoch
         self.save_image(image, epoch, y.item())
+
+
+    def generate_odeint(self):
+        """
+        Method to generate some images using odeint
+        """
+
+        # choose a random int between 0 and 1000
+        y = torch.randint(0, 1000, (1,)).to(self.device)
+        y_uncond = torch.tensor([1000]).to(self.device)
+
+        epsilon = 0.0001
+        times = torch.linspace(0.01, 1.0, 100, device=self.device)
+
+        def ode_fn(t, x):
+            t_inverse = 1.0 - t
+
+            # t_inverse is of shape [], we need it to be of shape [1, 1, 1, 1]
+            t_inverse = torch.tensor([t_inverse]).to(self.device)
+            t_inverse = t_inverse.unsqueeze(1).unsqueeze(1).unsqueeze(1)
+
+            u_t = (
+                1.0
+                / (1.0 - t_inverse + epsilon)
+                * (
+                    x
+                    - self.model(x, t_inverse.squeeze(1).squeeze(1).squeeze(1), y)[
+                        :, : self.nb_channel, :, :
+                    ]
+                )
+            )
+
+            u_t_uncond = (
+                1.0
+                / (1.0 - t_inverse + epsilon)
+                * (
+                    x
+                    - self.model(x, t_inverse.squeeze(1).squeeze(1).squeeze(1), y_uncond)[
+                        :, : self.nb_channel, :, :
+                    ]
+                )
+            )
+            u_t_cfg = u_t_uncond + (u_t - u_t_uncond) * self.cfg_value
+
+            return u_t_cfg
+
+        prior_t = torch.randn(1, self.nb_channel, IMAGE_SIZE, IMAGE_SIZE).to(
+            self.device
+        ) / 10.
+
+        with torch.no_grad():
+            result = odeint(ode_fn, prior_t, times, atol=1e-5, rtol=1e-5, method="midpoint")
+
+        image = self.vae.decode(result[-1] / 0.18).sample
+
+        # get the epoch number
+        epoch = self.current_epoch
+        self.save_image(image, epoch, y.item())
+
+
 
     def save_image(self, data, i, class_attribute):
         """
