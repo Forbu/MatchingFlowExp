@@ -62,7 +62,7 @@ class FlowTrainer(pl.LightningModule):
 
         vae_model = "stabilityai/sd-vae-ft-ema"
         self.vae = AutoencoderKL.from_pretrained(vae_model)
-        #self.vae.eval()
+        # self.vae.eval()
 
         # create the model
         self.model = dit_models.DiT_models["DiT-B/4"](
@@ -117,25 +117,41 @@ class FlowTrainer(pl.LightningModule):
         with torch.no_grad():
             # now we need to select a random time step between 0 and 1 for all the batch
             # to stabilize training we stratify the time generation
-            nb_strat = 8.
-            t_level = torch.arange(start=0, end=int(nb_strat), step=1).float() * 1./nb_strat  # nb_strat level
-            t = torch.cat([t_level + torch.rand(int(nb_strat)) * 1./nb_strat for _ in range(int(batch_size / nb_strat))], axis=0).float()
+            nb_strat = 8.0
+            t_level = (
+                torch.arange(start=0, end=int(nb_strat), step=1).float()
+                * 1.0
+                / nb_strat
+            )  # nb_strat level
+            t = torch.cat(
+                [
+                    t_level + torch.rand(int(nb_strat)) * 1.0 / nb_strat
+                    for _ in range(int(batch_size / nb_strat))
+                ],
+                axis=0,
+            ).float()
             t = t.unsqueeze(1).unsqueeze(1).unsqueeze(1)
 
             t = t.to(self.device)
 
-            weight_ponderation = torch.sqrt(1.0 / (1.0 - t + 0.0001) * 2 * 1.0 / (1.0 - t + 0.0001))
+            weight_ponderation = torch.sqrt(
+                1.0 / (1.0 - t + 0.0001) * 2 * 1.0 / (1.0 - t + 0.0001)
+            )
             weight_ponderation = weight_ponderation.clamp(1.0, 5.0)
 
             # we generate the prior dataset (gaussian noise)
-            prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(self.device)
+            prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(
+                self.device
+            )
 
             gt = t * prior + (1.0 - t) * image
 
         result_noise = self.model(gt, t.squeeze(), labels.long())
 
         loss = F.mse_loss(
-            weight_ponderation * result_noise[:, : self.nb_channel, :, :], weight_ponderation * prior, reduction="mean"
+            weight_ponderation * result_noise[:, : self.nb_channel, :, :],
+            weight_ponderation * prior,
+            reduction="mean",
         )
 
         self.log("loss_training", loss.cpu().detach().numpy().item())
@@ -172,36 +188,40 @@ class FlowTrainer(pl.LightningModule):
         epsilon = 0.0001
 
         for i in range(1, self.nb_time_steps):
-
             t = torch.ones((1, 1, 1, 1)).to(self.device)
             t = 1.0 - t * i / self.nb_time_steps
 
-            noise_estimation = self.model(prior_t, t.squeeze(1).squeeze(1).squeeze(1), y)
+            noise_estimation = self.model(
+                prior_t, t.squeeze(1).squeeze(1).squeeze(1), y
+            )
 
             u_theta = (
                 -1.0 / (1.0 - t + epsilon) * prior_t
-                + 1.0 / (1.0 - t+ epsilon) * noise_estimation[:, : self.nb_channel, :, :]
+                + 1.0
+                / (1.0 - t + epsilon)
+                * noise_estimation[:, : self.nb_channel, :, :]
             )
 
-            noise_estimation_uncond = self.model(prior_t, t.squeeze(1).squeeze(1).squeeze(1), y_uncond)
+            noise_estimation_uncond = self.model(
+                prior_t, t.squeeze(1).squeeze(1).squeeze(1), y_uncond
+            )
 
             u_theta_uncond = (
-                -1.0 / (1.0 - t+ epsilon) * prior_t
-                + 1.0 / (1.0 - t+ epsilon) * noise_estimation_uncond[:, : self.nb_channel, :, :]
+                -1.0 / (1.0 - t + epsilon) * prior_t
+                + 1.0
+                / (1.0 - t + epsilon)
+                * noise_estimation_uncond[:, : self.nb_channel, :, :]
             )
 
             u_theta_cfg = u_theta_uncond + self.cfg_value * (u_theta - u_theta_uncond)
 
-            prior_t = prior_t - u_theta_cfg * 1. / self.nb_time_steps
-
-        
+            prior_t = prior_t - u_theta_cfg * 1.0 / self.nb_time_steps
 
         image = self.vae.decode(prior_t / 0.18).sample
 
         # get the epoch number
         epoch = self.current_epoch
         self.save_image(image, epoch, y.item())
-
 
     def save_image(self, data, i, class_attribute):
         """
@@ -234,6 +254,6 @@ class FlowTrainer(pl.LightningModule):
         """
         # create the optimizer
         optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
-        #optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
+        # optimizer = AdamWScheduleFree(self.model.parameters(), lr=1e-4)
 
         return optimizer
