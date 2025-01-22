@@ -68,7 +68,7 @@ class FlowTrainer(pl.LightningModule):
         # self.vae.eval()
 
         # create the model
-        self.model = dit_models.DiT_models["DiT-B/4"](
+        self.model = dit_models.DiT_models["DiT-L/4"](
             input_size=IMAGE_SIZE, in_channels=4
         )
 
@@ -273,7 +273,7 @@ class FlowTrainer(pl.LightningModule):
 
         prior_t = torch.randn(1, self.nb_channel, IMAGE_SIZE, IMAGE_SIZE).to(
             self.device
-        ) / 10.
+        ) 
 
         with torch.no_grad():
             result = odeint(ode_fn, prior_t, times, atol=1e-5, rtol=1e-5, method="midpoint")
