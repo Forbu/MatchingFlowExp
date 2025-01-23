@@ -46,9 +46,9 @@ TODO to improve the performances :
 
 Sampling with classifier-free guidance really seems to improve sampling quality
 
-- [x] Time sampling should be done as in Stable diffusion 3 with lognormal proba
+- [x] Time sampling should be done as in Stable diffusion 3 with lognormal proba (v3)
 
-- [ ] Try optimal transport setup
+- [x] Try optimal transport setup (v4)
 
 - [ ] We should add EMA to improve sampling quality
 
