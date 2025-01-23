@@ -9,9 +9,10 @@ einops
 numpy
 matplotlib
 accelerate
-diffusers
 torchmetrics
 hf_transfer
+diffusers
 Cython
 mosaicml-streaming
 torchdiffeq
+POT[backend-torch]
