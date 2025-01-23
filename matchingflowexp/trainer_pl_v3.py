@@ -125,9 +125,12 @@ class FlowTrainer(pl.LightningModule):
             t = torch.tensor(s[:, 0])
             t = t.unsqueeze(1).unsqueeze(1).unsqueeze(1)
 
-            t = t.to(self.device)
+            t = t.to(self.device).float()
 
-            weight_ponderation = 1.0  # TODO here
+            weight_ponderation = torch.sqrt(
+                t / (1.0 - t + 0.0001) * 2 * t / (1.0 - t + 0.0001)
+            )
+            weight_ponderation = weight_ponderation.clamp(1.0, 5.0)  # TODO here
 
             # we generate the prior dataset (gaussian noise)
             prior = torch.randn(batch_size, self.nb_channel, img_w, img_w).to(
@@ -230,7 +233,7 @@ class FlowTrainer(pl.LightningModule):
 
             u_t_cfg = u_t_uncond + (u_t - u_t_uncond) * self.cfg_value
 
-            return u_t_cfg
+            return - u_t_cfg
 
         prior_t = torch.randn(1, self.nb_channel, IMAGE_SIZE, IMAGE_SIZE).to(
             self.device

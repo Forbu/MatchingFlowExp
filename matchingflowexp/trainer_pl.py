@@ -138,7 +138,7 @@ class FlowTrainer(pl.LightningModule):
             t = t.to(self.device)
 
             weight_ponderation = torch.sqrt(
-                1.0 / (1.0 - t + 0.0001) * 2 * 1.0 / (1.0 - t + 0.0001)
+                t / (1.0 - t + 0.0001) * 2 * t / (1.0 - t + 0.0001)
             )
             weight_ponderation = weight_ponderation.clamp(1.0, 5.0)
 

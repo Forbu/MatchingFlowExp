@@ -94,7 +94,7 @@ if __name__ == "__main__":
         train=True,
     )
 
-    batch_size = 64
+    batch_size = 256
 
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True
