@@ -48,7 +48,16 @@ Sampling with classifier-free guidance really seems to improve sampling quality
 
 - [x] Time sampling should be done as in Stable diffusion 3 with lognormal proba (v3)
 
-- [x] Try optimal transport setup (v4)
+With this setup we obtain better sampling quality :
+
+![alt text](images/image_dal.png) 
+
+![alt text](images/image-1.png)
+
+(B-4 model 150m parameters)
+
+
+- [ ] Try optimal transport setup
 
 - [ ] We should add EMA to improve sampling quality
 

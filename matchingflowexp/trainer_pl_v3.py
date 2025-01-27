@@ -214,7 +214,7 @@ class FlowTrainer(pl.LightningModule):
         y_uncond = torch.tensor([1000]).to(self.device)
 
         epsilon = 0.0001
-        times = torch.linspace(0.01, 1.0, 100, device=self.device)
+        times = torch.linspace(0.01, 1.0, 1000, device=self.device)
 
         def ode_fn(t, x):
             t_inverse = 1.0 - t
