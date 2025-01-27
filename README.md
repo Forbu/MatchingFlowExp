@@ -57,7 +57,7 @@ With this setup we obtain better sampling quality :
 (B-4 model 150m parameters)
 
 
-- [ ] Try optimal transport setup
+- [x] Try optimal transport setup
 
 - [ ] We should add EMA to improve sampling quality
 
