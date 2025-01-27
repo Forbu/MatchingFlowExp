@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 
 **.png
+
+# make a exception for images in images/ folder
+!images/
+
 **.pt
 **.ckpt
 
